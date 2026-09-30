@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f5ef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Little Wins">
+<link rel="manifest" href="manifest.json">
+<title>Little Wins</title>
+<style>
+:root{--bg:#f7f5ef;--card:#fff;--ink:#222;--muted:#777;--line:#e5e1d8;--accent:#6b7d5b;--soft:#edf1e8;--good:#4f7041}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.app{max-width:680px;margin:auto;padding:18px 16px 90px;padding-top:calc(18px + env(safe-area-inset-top))}
+h1{font-size:30px;margin:8px 0 4px}.sub{color:var(--muted);font-size:14px;margin-bottom:18px}.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}.nav button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 6px;font-weight:600}.nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 2px 8px #00000008}.card h2,.card h3{margin:0 0 12px}.small{font-size:13px;color:var(--muted)}.progress{height:9px;background:#ece9e1;border-radius:99px;overflow:hidden;margin:10px 0 17px}.bar{height:100%;background:var(--accent);transition:.25s}
+.task{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--line);cursor:pointer}.task:first-child{border-top:0}.box{width:25px;height:25px;border:2px solid #b9b5ab;border-radius:7px;display:grid;place-items:center;flex:none}.box.done{background:var(--accent);border-color:var(--accent);color:#fff}.task .label{font-size:16px}.tag{margin-left:auto;font-size:11px;color:var(--good);font-weight:700}
+.goal{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}.goal:first-of-type{border-top:0}.count{font-size:20px;font-weight:700}.pill{background:var(--soft);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer}
+.weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.weeknav button,.secondary{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 12px}.day{border:1px solid var(--line);border-radius:14px;padding:12px;margin:8px 0;background:#fff;cursor:pointer}.day.done{border-color:#b8c7ae;background:#fbfcf9}.dayhead{display:flex;justify-content:space-between}.dayname{font-weight:700}.mini{font-size:12px;color:var(--muted);margin-top:4px}.historyrow{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-top:1px solid var(--line)}.historyrow:first-child{border-top:0}.achieved{color:var(--good);font-weight:700}.empty{text-align:center;color:var(--muted);padding:25px}.toast{position:fixed;left:16px;right:16px;bottom:20px;background:#242424;color:#fff;border-radius:15px;padding:14px 16px;text-align:center;font-weight:700;display:none;z-index:10}.toast.show{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>Little Wins</h1><div class="sub">Small wins. One day at a time.</div>
+<div class="nav"><button id="todayBtn">Today</button><button id="weekBtn">This Week</button><button id="historyBtn">History</button></div>
+<main id="app"></main>
+</div><div id="toast" class="toast"></div>
+<script>
+const HABITS=[
+["alarm","Get up when my alarm goes"],["waterWork","Drink water before work"],["waterLunch","Drink water before lunch"],
+["waterDinner","Drink water before dinner"],["waterBed","Drink water before bed"],["move","Treadmill / walk"],["housework","Do some housework"]];
+const KEY="littleWins_v1";
+let state=JSON.parse(localStorage.getItem(KEY)||'{"days":{},"celebrated":{}}');
+let view="today", selectedDate=iso(new Date()), weekOffset=0;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(state))}
+function pad(n){return String(n).padStart(2,"0")}
+function iso(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function parse(s){let a=s.split("-").map(Number);return new Date(a[0],a[1]-1,a[2])}
+function addDays(s,n){let d=parse(s);d.setDate(d.getDate()+n);return iso(d)}
+function monday(s){let d=parse(s),x=d.getDay();d.setDate(d.getDate()-(x===0?6:x-1));return iso(d)}
+function fmt(s){return parse(s).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}
+function short(s){return parse(s).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
+function day(s){return state.days[s] ||= {alarm:false,waterWork:false,waterLunch:false,waterDinner:false,waterBed:false,move:false,housework:false,run:false,gym:false}}
+function satisfied(d,h){return h==="move" ? (!!d.move||!!d.run) : !!d[h]}
+function dailyCount(s){let d=day(s);return HABITS.filter(x=>satisfied(d,x[0])).length}
+function stats(ws){let run=0,gym=0,daily=0;for(let i=0;i<7;i++){let s=addDays(ws,i),d=day(s);run+=d.run?1:0;gym+=d.gym?1:0;daily+=dailyCount(s)}return{run,gym,daily,all:daily===49&&run===3&&gym===2}}
+function toast(m){let t=document.getElementById("toast");t.textContent=m;t.classList.add("show");clearTimeout(window.tt);window.tt=setTimeout(()=>t.classList.remove("show"),1800)}
+function buzz(big){if(navigator.vibrate)navigator.vibrate(big?[100,70,180,70,260]:[70])}
+function celebrate(id,msg,big=false){if(state.celebrated[id])return;state.celebrated[id]=true;save();toast(msg);buzz(big)}
+function check(s){
+ let ws=monday(s),d=day(s);
+ if(dailyCount(s)===7)celebrate("day:"+s,"✨ Day complete!");
+ for(let h of HABITS){let ok=true;for(let i=0;i<7;i++)if(!satisfied(day(addDays(ws,i)),h[0]))ok=false;if(ok)celebrate("habit:"+ws+":"+h[0],"✨ "+h[1]+" — 7/7!")}
+ if(stats(ws).all)celebrate("big:"+ws,"🎉 WEEK ACHIEVED! 100% complete!",true)
+}
+function toggle(s,h){let d=day(s);d[h]=!d[h];save();check(s);render()}
+function tasks(s){let d=day(s);return HABITS.map(([h,label])=>{let done=satisfied(d,h),auto=h==="move"&&d.run&&!d.move;return `<div class="task" onclick="toggle('${s}','${h}')"><div class="box ${done?'done':''}">${done?'✓':''}</div><span class="label">${label}</span>${auto?'<span class="tag">RUN</span>':''}</div>`}).join("")}
+function goal(label,n,target,h){return `<div class="goal"><div><strong>${label}</strong><div class="small">Weekly target</div></div><div class="count">${n}/${target}</div><div class="pill" onclick="toggle('${selectedDate}','${h}')">${n>=target?'✓ done':'+'+(target-n)}</div></div>`}
+function renderToday(){let s=selectedDate,n=dailyCount(s),st=stats(monday(s));document.getElementById("app").innerHTML=`<div class="card"><div class="small">Today</div><h2>${fmt(s)}</h2><div class="small">${n}/7 daily habits</div><div class="progress"><div class="bar" style="width:${n/7*100}%"></div></div>${tasks(s)}</div><div class="card"><h3>This week's exercise</h3>${goal("Run",st.run,3,"run")}${goal("Gym",st.gym,2,"gym")}</div>`}
+function renderWeek(){let ws=addDays(monday(selectedDate),weekOffset*7),st=stats(ws),rows="";for(let i=0;i<7;i++){let s=addDays(ws,i),n=dailyCount(s),d=day(s);rows+=`<div class="day ${n===7?'done':''}" onclick="selectedDate='${s}';view='today';render()"><div class="dayhead"><span class="dayname">${parse(s).toLocaleDateString("en-GB",{weekday:"long"})}</span><span>${n}/7</span></div><div class="mini">${short(s)} · ${d.run?'Run ✓':'Run —'} · ${d.gym?'Gym ✓':'Gym —'}</div></div>`}document.getElementById("app").innerHTML=`<div class="card"><div class="weeknav"><button onclick="weekOffset--;render()">‹</button><strong>${short(ws)} – ${short(addDays(ws,6))}</strong><button onclick="weekOffset++;render()">›</button></div><div class="small">Tap a day to edit its 7 daily habits</div>${rows}</div><div class="card"><h3>Week progress</h3><div class="goal"><span>Daily habits</span><strong>${st.daily}/49</strong></div><div class="goal"><span>Runs</span><strong>${st.run}/3</strong></div><div class="goal"><span>Gym</span><strong>${st.gym}/2</strong></div><div class="goal"><span>Overall</span><strong>${st.all?'🎉 100%':'In progress'}</strong></div></div>`}
+function renderHistory(){let cur=monday(iso(new Date())),items=[];for(let i=1;i<=12;i++){let ws=addDays(cur,-7*i),st=stats(ws),has=false;for(let j=0;j<7;j++)if(state.days[addDays(ws,j)])has=true;if(has||st.daily||st.run||st.gym)items.push({ws,st})}let rows=items.length?items.map(x=>`<div class="historyrow"><div><strong>${short(x.ws)} – ${short(addDays(x.ws,6))}</strong><div class="small">${x.st.daily}/49 habits · ${x.st.run}/3 runs · ${x.st.gym}/2 gym</div></div><div class="${x.st.all?'achieved':''}">${x.st.all?'🎉 100%':'In progress'}</div></div>`).join(""):'<div class="empty">No previous weeks yet.</div>';document.getElementById("app").innerHTML=`<div class="card"><h2>History</h2><div class="small">Your previous weeks</div>${rows}</div>`}
+function render(){document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));document.getElementById(view==="today"?"todayBtn":view==="week"?"weekBtn":"historyBtn").classList.add("active");view==="today"?renderToday():view==="week"?renderWeek():renderHistory()}
+todayBtn.onclick=()=>{view="today";render()};weekBtn.onclick=()=>{view="week";render()};historyBtn.onclick=()=>{view="history";render()};
+window.toggle=toggle;window.render=render;render();
+</script></body></html>
